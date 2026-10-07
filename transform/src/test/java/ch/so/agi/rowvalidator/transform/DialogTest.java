@@ -6,6 +6,9 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hop.core.HopClientEnvironment;
+import org.apache.hop.core.annotations.Transform;
+import org.apache.hop.core.plugins.PluginRegistry;
+import org.apache.hop.core.plugins.TransformPluginType;
 import org.apache.hop.core.variables.Variables;
 import org.apache.hop.pipeline.PipelineMeta;
 import org.apache.hop.pipeline.transform.TransformMeta;
@@ -20,6 +23,16 @@ class DialogTest {
   @BeforeAll
   static void start() throws Exception {
     HopClientEnvironment.init();
+    // Clean test builds must not rely on discovery of a packaged plugin/Jandex index.
+    PluginRegistry registry = PluginRegistry.getInstance();
+    registry.registerPluginClass(
+        RowValidatorMeta.class.getName(), TransformPluginType.class, Transform.class);
+    assertNotNull(
+        registry.findPluginWithId(TransformPluginType.class, "INTERLIS_ROW_VALIDATOR_TRANSFORM"));
+    assertEquals(
+        "INTERLIS_ROW_VALIDATOR_TRANSFORM",
+        registry.findPluginIdWithMainClassName(
+            TransformPluginType.class, RowValidatorMeta.class.getName()));
     display = new Display();
   }
 

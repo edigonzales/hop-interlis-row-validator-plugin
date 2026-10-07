@@ -11,6 +11,10 @@ Workflow/helper revision: cf686f2cb631dd32722377f301692f84fe9cd6a5, profile stan
 Prerequisites: JDK 21 (compatibility 25), Maven, Python 3; Linux SWT requires xvfb-run.
 From the repository root, with that helper checkout in .ci/hop-plugin-ci:
 
+`.mvn/maven.config` selects project global settings that mirror only Central to
+`https://repo.maven.apache.org/maven2/` (repo1 returned HTTP 429 in CI). The generated
+user settings below still provide the INTERLIS repositories and optional credentials.
+
 ```
 python3 .ci/hop-plugin-ci/scripts/write_maven_settings.py --output .ci/settings.xml
 mvn -s .ci/settings.xml -U -B -ntp clean verify

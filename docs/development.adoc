@@ -17,6 +17,16 @@ Use `xvfb-run -a mvn ...` for Linux SWT tests. CI settings and the repository co
 are documented in AGENTS.md. Shared workflows/helpers are pinned to
 `cf686f2cb631dd32722377f301692f84fe9cd6a5`.
 
+Run Maven from the repository root. `.mvn/maven.config` loads project global settings
+with a mirror for Central at `https://repo.maven.apache.org/maven2/`, avoiding the
+`repo1.maven.org` endpoint that returned HTTP 429 in CI. This applies to dependencies
+and build plugins; the generated user settings still supply the INTERLIS repositories
+and credentials. Shared workflow and helper revisions remain pinned as above.
+
+SWT tests explicitly register the transform before opening its dialog. A clean `test`
+build must work without an installed plugin or a previously generated Jandex index;
+installed-ZIP discovery is verified separately by the package and E2E checks.
+
 The E2E runner checks the Apache Hop distribution checksum, installs the built ZIP in a
 fresh distribution and runs actual hop-run pipelines. It never rebuilds the candidate.
 Use `--cache` for a downloaded distribution cache; results and logs remain in target/e2e.
