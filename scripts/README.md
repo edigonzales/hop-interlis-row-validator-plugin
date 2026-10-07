@@ -3,6 +3,7 @@
 - `build-and-install.sh [hop-directory]`: builds with JDK 21, runs tests, checks the ZIP and installs it; defaults to `/Users/stefan/Downloads/hop`.
 - `check-distribution.py`: validates installation root, plugin index, embedded engine and private ANTLR; rejects bundled host libraries.
 - `run-e2e.py`: installs and runs the canonical ZIP without rebuilding it.
+- `test_run_e2e.py`: offline HTTP/download, fallback, checksum and process-timeout regression tests.
 - `build-docs.py`: Biblios from the exact checkout; `--revision` selects a commit and `--serve` opens a local HTTP preview.
 - `check-docs-site.py`: validates generated links, GUI styles and search content.
 

@@ -18,7 +18,7 @@ jobs:
       pom-file: pom.xml
       zip-descriptors: >-
         [{"artifactId":"hop-interlis-row-validator-plugin","zipGlob":"assemblies/plugin/target/hop-interlis-row-validator-plugin-*.zip","pluginRoot":"plugins/transforms/interlis-row-validator"}]
-      validation-commands: '["python3 .ci/hop-plugin-ci/scripts/check-plugin-repository.py --profile standard-plugin", "python3 scripts/check-distribution.py", "python3 scripts/run-e2e.py"]'
+      validation-commands: '["python3 .ci/hop-plugin-ci/scripts/check-plugin-repository.py --profile standard-plugin", "python3 scripts/check-distribution.py", "python3 -m unittest discover -s scripts -p test_run_e2e.py", "python3 scripts/run-e2e.py"]'
       artifact-name-prefix: hop-interlis-row-validator-plugin
       group-id: ch.so.agi
       hop-version: 2.19.0

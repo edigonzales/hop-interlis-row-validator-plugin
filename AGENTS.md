@@ -20,6 +20,7 @@ python3 .ci/hop-plugin-ci/scripts/write_maven_settings.py --output .ci/settings.
 mvn -s .ci/settings.xml -U -B -ntp clean verify
 python3 .ci/hop-plugin-ci/scripts/check-plugin-repository.py --profile standard-plugin
 python3 scripts/check-distribution.py
+python3 -m unittest discover -s scripts -p test_run_e2e.py
 python3 scripts/run-e2e.py
 python3 scripts/build-docs.py
 ```

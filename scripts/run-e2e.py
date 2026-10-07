@@ -1,31 +1,105 @@
 #!/usr/bin/env python3
 """Run installed ZIPs in an isolated Hop 2.19 distribution, never on Maven's classpath."""
-import argparse, csv, hashlib, json, os, shutil, subprocess, urllib.request, zipfile, time, tempfile, platform, re
+import argparse, csv, hashlib, json, os, shutil, subprocess, zipfile, time, platform, re, signal
 from pathlib import Path
 import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape
 
 ROOT = Path(__file__).resolve().parents[1]
 HOP_VERSION = '2.19.0'
+DOWNLOAD_BASES = ('https://dlcdn.apache.org/hop', 'https://archive.apache.org/dist/hop')
 
-def download(url, dest):
-    with urllib.request.urlopen(url, timeout=120) as response, dest.open('wb') as out:
-        shutil.copyfileobj(response, out)
+def log(message):
+    print(f'[e2e] {message}', flush=True)
 
-def distribution(cache):
+def run_logged(command, logfile, *, cwd=None, env=None, timeout=300,
+               progress=None, progress_interval=15):
+    """Keep output on disk and bound the entire process, including its children on POSIX."""
+    start = time.monotonic()
+    with logfile.open('w', encoding='utf-8') as output:
+        proc = subprocess.Popen(command, cwd=cwd, env=env, stdout=output,
+                                stderr=subprocess.STDOUT, start_new_session=os.name == 'posix')
+        try:
+            while True:
+                remaining = timeout - (time.monotonic() - start)
+                if remaining <= 0:
+                    raise TimeoutError(f'Time limit of {timeout}s exceeded; log: {logfile}')
+                try:
+                    proc.wait(timeout=min(progress_interval, remaining))
+                    break
+                except subprocess.TimeoutExpired:
+                    if progress:
+                        progress(time.monotonic() - start)
+        finally:
+            if proc.poll() is None:
+                if os.name == 'posix':
+                    os.killpg(proc.pid, signal.SIGKILL)
+                else:
+                    proc.kill()
+                proc.wait()
+    return subprocess.CompletedProcess(command, proc.returncode,
+                                       logfile.read_text(encoding='utf-8', errors='replace'))
+
+def download(url, dest, *, timeout=300):
+    """Use a total deadline and a low-speed limit, not just a per-socket-read timeout."""
+    if not shutil.which('curl'):
+        raise RuntimeError('curl is required to download the Hop distribution')
+    partial = dest.with_name(dest.name + '.part')
+    logfile = dest.with_name(dest.name + '.download.log')
+    log(f'Downloading {url} (limit {timeout}s)')
+    try:
+        proc = run_logged(
+            ['curl', '--fail', '--location', '--silent', '--show-error',
+             '--connect-timeout', '20', '--max-time', str(timeout),
+             '--speed-limit', '16384', '--speed-time', '30',
+             '--output', str(partial), url], logfile, timeout=timeout + 5,
+            progress=lambda elapsed: log(
+                f'Download: {(partial.stat().st_size if partial.exists() else 0) / 1048576:.1f} MiB'
+                f' received in {elapsed:.0f}s'))
+        if proc.returncode:
+            raise RuntimeError(f'Download failed: {url}\n{proc.stdout.strip()}')
+        partial.replace(dest)
+        log(f'Download complete: {dest.name} ({dest.stat().st_size / 1048576:.1f} MiB)')
+    finally:
+        partial.unlink(missing_ok=True)
+
+def verify_checksum(archive, checksum):
+    hashes = re.findall(r'\b[0-9a-fA-F]{128}\b', checksum.read_text(encoding='utf-8'))
+    if len(hashes) != 1:
+        raise ValueError(f'Expected one SHA-512 checksum in {checksum}')
+    digest = hashlib.sha512()
+    with archive.open('rb') as data:
+        for chunk in iter(lambda: data.read(1024 * 1024), b''):
+            digest.update(chunk)
+    if digest.hexdigest() != hashes[0].lower():
+        raise ValueError(f'Hop ZIP checksum mismatch: {archive}')
+
+def distribution(cache, bases=DOWNLOAD_BASES):
     cache.mkdir(parents=True, exist_ok=True)
     name = f'apache-hop-client-{HOP_VERSION}.zip'
     archive = cache / name
     checksum = cache / (name+'.sha512')
-    if not checksum.exists():
-        download(f'https://archive.apache.org/dist/hop/{HOP_VERSION}/{name}.sha512', checksum)
-    if not archive.exists():
-        temporary = archive.with_suffix('.part')
-        download(f'https://archive.apache.org/dist/hop/{HOP_VERSION}/{name}', temporary)
-        temporary.replace(archive)
-    expected = next(w.lower() for w in checksum.read_text().split() if len(w)==128)
-    assert hashlib.sha512(archive.read_bytes()).hexdigest() == expected, 'Hop ZIP checksum mismatch'
-    return archive
+    if archive.exists() and checksum.exists():
+        log(f'Checking cached Hop distribution: {archive}')
+        try:
+            verify_checksum(archive, checksum)
+            return archive
+        except ValueError as error:
+            log(f'{error}; downloading a fresh copy')
+    failures = []
+    for base in bases:
+        try:
+            download(f'{base}/{HOP_VERSION}/{name}.sha512', checksum, timeout=30)
+            download(f'{base}/{HOP_VERSION}/{name}', archive)
+            log('Verifying Hop SHA-512 checksum')
+            verify_checksum(archive, checksum)
+            return archive
+        except (OSError, ValueError, RuntimeError) as error:
+            failures.append(str(error))
+            archive.unlink(missing_ok=True)
+            checksum.unlink(missing_ok=True)
+            log(f'{error}; trying the next download source if available')
+    raise RuntimeError('Cannot obtain a verified Hop distribution:\n' + '\n'.join(failures))
 
 def transform(name, kind, body, x, copies=1):
     return f'<transform><name>{name}</name><type>{kind}</type><copies>{copies}</copies><distribute>Y</distribute>{body}<GUI><xloc>{x}</xloc><yloc>160</yloc></GUI></transform>'
@@ -55,16 +129,22 @@ def main():
     parser.add_argument('--zip',type=Path,default=ROOT/'assemblies/plugin/target/hop-interlis-row-validator-plugin-0.1.0-SNAPSHOT.zip')
     parser.add_argument('--benchmark-rows',type=int,default=20000)
     args=parser.parse_args()
+    log(f'Starting installed-plugin checks with {args.zip}')
+    if not args.zip.is_file():
+        parser.error(f'Plugin ZIP not found: {args.zip}; build it before running E2E')
     work=ROOT/'target/e2e'
     if work.exists(): shutil.rmtree(work)
     work.mkdir(parents=True)
     if os.environ.get('HOP_E2E_HOME'):
         hop=Path(os.environ['HOP_E2E_HOME']).resolve()
         assert hop!=ROOT, 'Use a disposable Hop installation'
+        log(f'Using disposable Hop installation: {hop}')
     else:
         archive=distribution(args.cache)
+        log(f'Extracting {archive} into {work}')
         with zipfile.ZipFile(archive) as z:z.extractall(work)
         hop=work/'hop'
+    log('Installing the exact plugin ZIP')
     with zipfile.ZipFile(args.zip) as z:z.extractall(hop)
     for script in hop.glob('*.sh'):script.chmod(0o755)
     (work/'spool').mkdir()
@@ -99,8 +179,15 @@ def main():
         # OS peak resident memory of the whole Hop process, including JVM and plugins.
         measured=Path('/usr/bin/time').exists() and platform.system() in ('Darwin','Linux')
         if measured:command=['/usr/bin/time','-l' if platform.system()=='Darwin' else '-v',*command]
-        proc=subprocess.run(command,cwd=hop,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=300)
-        elapsed=time.monotonic()-start;(work/(case+'.log')).write_text(proc.stdout)
+        logfile=work/(case+'.log')
+        log(f'Running {case}; log: {logfile} (limit 300s)')
+        try:
+            proc=run_logged(command,logfile,cwd=hop,env=env,timeout=300,
+                            progress=lambda elapsed: log(f'{case}: running for {elapsed:.0f}s; log: {logfile}'))
+        except TimeoutError:
+            log(logfile.read_text(encoding='utf-8',errors='replace')[-9000:])
+            raise
+        elapsed=time.monotonic()-start
         failed=case in ('late-unique','full-constraint','single-invalid')
         assert (proc.returncode!=0)==failed,proc.stdout[-9000:]
         reports=list((work/'reports'/case).glob('*.jsonl'))
@@ -133,5 +220,6 @@ def main():
             result['process_peak_rss_bytes']=int(match.group(1))*(1 if platform.system()=='Darwin' else 1024)
         results.append(result);print(json.dumps(result),flush=True)
     (work/'results.json').write_text(json.dumps(results,indent=2)+'\n')
+    log(f'All {len(results)} installed-plugin scenarios passed')
 
 if __name__=='__main__':main()
