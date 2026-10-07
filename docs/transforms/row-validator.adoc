@@ -1,0 +1,187 @@
+[[row-validator]]
+= Row Stream Validator (INTERLIS)
+:plugin-id: INTERLIS_ROW_VALIDATOR_TRANSFORM
+:plugin-type: transform
+:description: Validate a finite Hop row stream against an INTERLIS class.
+
+== Description
+
+Each input row represents one object of a configured concrete INTERLIS class.
+The entire finite stream is a single validation unit. Configuration is fixed for the run.
+The transform directly uses ili2c 5.6.8 and iox-ili 1.24.4. It is independently installable.
+
+Full validation is the default: validate while reading, retain original rows, finish the
+transfer and explicitly execute the second pass exactly once. Only a successful validation
+permits output. A late UNIQUE conflict therefore produces no output rows.
+
+Single Pass uses the native iox-ili first pass. This is a limited validation scope:
+class constraints, even some object-local MANDATORY CONSTRAINTs, are evaluated by the
+library in its second pass and are omitted here. Single Pass is not a full object check.
+
+== Input
+
+One incoming finite stream, one configured class and a synthetic basket. Inherited scalar
+attributes are supported. Mandatory attributes require a source; optional attributes may
+remain undefined. Structures, repeated attributes, geometry and association roles are
+rejected before input processing. Additional input fields are retained but not validated.
+
+Model names and sources are separated by semicolons. Sources may be local directories or
+INTERLIS HTTP(S) repositories. An explicit `.ili` path is also accepted as a model entry.
+Configuration fields support Hop variables; unresolved variables fail at runtime.
+The optional validation configuration is a local ilivalidator INI configuration file.
+
+== Options
+
+[cols="1,3"]
+|===
+|Option |Meaning
+|Full validation |One copy, no partitioning; buffered output after successful validation.
+|Single Pass |Native first pass only; independent copies allowed; stops on first error.
+|Mappings |One source per target attribute. Extra source fields are retained.
+|Conversion time zone |Explicit ZoneId, such as Europe/Zurich. Required for typed temporal sources; no default.
+|Object-ID field |Empty generates UUIDs. Other OID domains than UUIDOID require an explicit field.
+|Source row identifier |Optional String/Integer field for diagnostics, distinct from object ID.
+|Report directory |Optional; one unique UTF-8 JSONL file per run/copy. Hop log is always enabled.
+|Rows in memory |Default 10000, minimum 1. Applies only to the original-row cache.
+|Temporary directory |Empty uses system temp; otherwise an existing writable local directory.
+|Compress spool files |Optional GZIP, off by default.
+|===
+
+=== Scalar and temporal mapping
+
+[cols="1,3"]
+|===
+|Source |Conversion
+|String |Exact lexical value. No trim, normalization or calendar correction. Empty remains empty.
+|null |No IOM attribute value.
+|Integer / BigNumber / Number |Numeric target only; locale-independent, no model-precision rounding. Non-finite numbers fail.
+|Boolean |BOOLEAN target, `true` or `false`.
+|Date / Timestamp |Date, Time or DateTime in the explicit zone. Date extracts only the date part.
+|Other combinations |Configuration error.
+|===
+
+Typed temporal formats are `uuuu-MM-dd`, `HH:mm:ss.SSS`,
+`uuuu-MM-dd'T'HH:mm:ss.SSS` and legacy `uuuuMMdd`.
+Sub-millisecond precision on Time/DateTime is a mapping error; it is never silently truncated.
+INTERLIS 2.4 DATE/TIMEOFDAY/DATETIME and standard XML domains are recognized, including
+supported restricted domains and inheritance. Custom FORMAT types accept strings.
+This conversion controls technical representation, not the INTERLIS time reference system.
+Text offsets, Z suffixes and invalid date strings are passed unchanged to iox-ili.
+Its configured validation semantics govern the result; this plugin does not add a calendar validator.
+
+Lazy storage is decoded using cloned field metadata. Lazy timestamps use a strict metadata
+mask and the configured zone; non-existent DST times fail, overlapping local times choose
+the earlier offset. Empty lazy strings remain empty. Raw rows and metadata are not normalized.
+The pinned compiler cannot compile every conceivable FORMAT alias chain (notably FORMAT
+based directly on a DATE alias); model compilation failures are surfaced, not bypassed.
+
+=== Dialog
+
+Transform name and mode remain visible above four tabs. Select a mapping table row to edit
+its source field; free typing is allowed when upstream metadata are unavailable.
+
+[.gui-mockup]
+----
+Row Stream Validator (INTERLIS)
+Name  [ Validate rows                                      ]
+Mode  (o) Full validation  ( ) Single Pass - limited scope
+All rows retained until successful full validation.
+
+[Validation] [Field mapping] [Output & report] [Advanced]
+Models          [ Rows                                    ]
+Model sources   [ ${PROJECT_HOME}/models                   ]
+[Load models] [Cancel loading]
+Class           [ Rows.Data.Row                         v ]
+Configuration   [ optional local file                     ]
+                [Browse...]
+The entire finite input forms one validation unit.
+
+[Check configuration]                  [Cancel] [OK]
+----
+
+The other tabs occupy the same content area:
+
+[.gui-mockup]
+----
+[Field mapping]
+[Refresh input fields] [Match by name]
+Attribute      Type (* mandatory)  Input field    Mapping status
+key            TEXT *              key          Assigned
+amount         NUMERIC *           amount       Assigned
+Conversion zone [ Europe/Zurich                          ]
+Selected attribute details / zone help
+
+[Output & report]
+Mode-dependent output and failure explanation
+JSONL directory  [ optional                             ] [Browse...]
+Source row field [ optional                             ]
+
+[Advanced]
+Object-ID field  [ empty = generate UUID                 ]
+Rows in memory   [ 10000                                 ]
+Temp directory   [ empty = system temp                   ] [Browse...]
+[ ] Compress spool files
+Original-row cache only; validator state may grow.
+----
+
+Loading is explicit and runs in the background. Cancellation discards its result; an active
+repository/compiler operation may take time to return. Configuration changes invalidate stale results.
+Automatic matching fills empty assignments only, exact matches before unambiguous case-insensitive
+matches. Manual and orphaned mappings are preserved for review. Assigned means configured,
+not that the data have been validated. Configuration checking does not execute the pipeline.
+Unresolved runtime variables and unavailable metadata are reported as unchecked.
+OK commits the draft; Cancel, Escape and window close discard it.
+
+== Output
+
+The original schema and all original field values in reception order. No result fields or
+error hop. Full validation releases all rows after validation without blocking errors;
+with errors it releases none and fails the pipeline. Warnings permit release.
+An empty regular input still completes validation and emits zero rows.
+
+Single Pass immediately emits rows without detected errors. The first erroneous row is withheld;
+previous output cannot be recalled. Across parallel copies no global order is promised.
+Validation success is relative to the model and effective configuration, including disabled rules.
+Successful release is not a transaction: subsequent output/target failure can leave partial results.
+
+=== Report records
+
+`run_start`: schema_version 1, run/copy identity, models, sources, class, mode, zone and merged
+validation configuration. `issue`: severity, phase, message and available object, source row,
+input number and model element. Missing associations are left null/absent.
+`validation_end`: complete, errors, warnings, input_rows and release decision; flushed before
+release/failure. `run_end`: status, input_rows and actually emitted output_rows.
+Missing run_end means an incomplete report. A single-pass early failure reports complete=false.
+Duplicate object IDs disable ambiguous late source-row attribution. Original source identifiers
+are never substituted for object IDs automatically.
+
+== Supported engines
+
+Apache Hop 2.19.0 native Local engine, locally or on a Hop Server, Java 21.
+CI additionally checks Java 25. Beam/Spark/Flink/Dataflow are unsupported.
+Full validation rejects multiple copies and partitioning; Single Pass allows independent copies.
+
+== Examples
+
+Open link:https://github.com/edigonzales/hop-interlis-row-validator-plugin/tree/main/examples[examples]
+and follow its README. `scalar-rows.hpl` maps key and amount from a Data Grid, forces spooling
+with a one-row cache and logs output. Point MODEL_DIR at the examples directory.
+The installed-plugin E2E scenarios also exercise late duplicates and native Single Pass.
+
+== Error handling
+
+Configuration errors fail initialization. Full validation continues after data/mapping errors
+so later diagnostics remain available, then fails with zero output. Single Pass stops on the
+first data error. Technical exceptions, spool/report failures and cancellation never cause a
+fallback to immediate output. Files and validator resources are cleaned up on controlled exit.
+Unexpected spool EOF is an error. A stopped input is not treated as regular completion.
+Report finalization precedes setting the pipeline failure status.
+
+== Limitations
+
+No geometry, structures, associations, reference data, grouping, changing class/basket,
+custom UNIQUE implementation, data cleansing, or standalone message output.
+Validator context and source correlation indexes can grow with input size; only the
+original-row cache is bounded. Spooling adds local disk I/O and delays downstream work.
+Process termination cannot guarantee cleanup; crash reports may lack terminal records.
+A limited output preview still needs to read the entire input in full mode.

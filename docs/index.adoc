@@ -1,0 +1,3 @@
+= Row Stream Validator (INTERLIS)
+
+include::master.adoc[]

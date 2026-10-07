@@ -1,0 +1,28 @@
+INTERLIS 2.3;
+MODEL Unsupported (en) AT "https://example.org" VERSION "2026-10-07" =
+  TOPIC Data =
+    STRUCTURE Part =
+      label : TEXT*20;
+    END Part;
+    CLASS Nested =
+      parts : BAG {0..*} OF Part;
+    END Nested;
+    CLASS Place =
+      position : COORD 0.00 .. 100.00, 0.00 .. 100.00;
+    END Place;
+    CLASS LeftSide =
+      label : TEXT*20;
+    END LeftSide;
+    CLASS RightSide =
+      label : TEXT*20;
+    END RightSide;
+    ASSOCIATION Connection =
+      left -- {0..1} LeftSide;
+      right -- {0..*} RightSide;
+    END Connection;
+    CLASS NumericId =
+      OID AS INTERLIS.I32OID;
+      label : TEXT*20;
+    END NumericId;
+  END Data;
+END Unsupported.

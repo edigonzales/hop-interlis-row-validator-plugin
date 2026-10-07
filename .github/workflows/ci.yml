@@ -1,0 +1,32 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: raven-actions/actionlint@v2
+  verify:
+    uses: ./.github/workflows/verify.yml
+  publish:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [lint, verify]
+    uses: edigonzales/hop-plugin-ci/.github/workflows/plugin-publish.yml@cf686f2cb631dd32722377f301692f84fe9cd6a5
+    with:
+      ci-ref: cf686f2cb631dd32722377f301692f84fe9cd6a5
+      repository-kind: snapshot
+      verified-artifact-name: hop-interlis-row-validator-plugin-canonical
+      pom-file: pom.xml
+      zip-descriptors: >-
+        [{"artifactId":"hop-interlis-row-validator-plugin","zipGlob":"assemblies/plugin/target/hop-interlis-row-validator-plugin-*.zip","pluginRoot":"plugins/transforms/interlis-row-validator"}]
+      group-id: ch.so.agi
+      hop-version: 2.19.0
+    secrets:
+      MAVEN_USERNAME: ${{ secrets.INTERLIS_MAVEN_USERNAME }}
+      MAVEN_PASSWORD: ${{ secrets.INTERLIS_MAVEN_PASSWORD }}

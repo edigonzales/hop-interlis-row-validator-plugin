@@ -1,0 +1,20 @@
+INTERLIS 2.4;
+MODEL Times24 (en) AT "https://example.org" VERSION "2026-10-07" =
+  DOMAIN
+    Day = DATE;
+    NarrowDay = FORMAT INTERLIS.XMLDate "2020-01-01" .. "2030-12-31";
+    MoreDay = FORMAT NarrowDay "2021-01-01" .. "2029-12-31";
+    Moment = DATETIME;
+    Clock = TIMEOFDAY;
+  TOPIC Data =
+    CLASS Row =
+      day : MoreDay;
+      standardDay : Day;
+      inlineDay : DATE;
+      inlineTime : TIMEOFDAY;
+      inlineMoment : DATETIME;
+      clock : Clock;
+      moment : Moment;
+    END Row;
+  END Data;
+END Times24.

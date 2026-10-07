@@ -1,0 +1,41 @@
+site:
+  title: "Row Stream Validator (INTERLIS)"
+  url: https://edigonzales.github.io/hop-interlis-row-validator-plugin/
+  default_language: en
+
+output:
+  dir: build/site
+  clean: true
+
+ui:
+  theme: default
+  show_version_badge: false
+  show_edit_link: false
+  show_source_link: false
+  syntax_highlighting: prism
+  version_switch_mode: start_page
+  search_language_mode: multilingual_safe
+  sidebar_toc_depth: 2
+  content_toc: off
+  content_section_numbers: on
+  content_section_number_depth: 3
+
+content:
+  sources:
+    - id: row-validator
+      display_name: Row Stream Validator
+      url: https://github.com/edigonzales/hop-interlis-row-validator-plugin.git
+      branches:
+        - name: main
+          display_version: Latest
+      start_path: docs
+      default_version: main
+      render_mode: single_page
+      master_file: master.adoc
+      sidebar_toc_numbers: on
+
+pdf:
+  enabled: false
+
+docx:
+  enabled: false

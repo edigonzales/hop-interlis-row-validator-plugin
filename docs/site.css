@@ -1,0 +1,6 @@
+/* ASCII GUI mockups are rendered with a smaller font than regular code blocks. */
+.listingblock.gui-mockup pre,
+pre.gui-mockup {
+  font-size: 0.75em;
+  line-height: 1.25;
+}
