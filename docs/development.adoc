@@ -13,7 +13,7 @@ python3 scripts/run-e2e.py
 python3 scripts/build-docs.py
 ----
 
-Use `xvfb-run -a mvn ...` for Linux SWT tests. CI settings and the repository contract command
+Use `xvfb-run -a mvn ...` for Linux SWT tests. CI settings and verification commands
 are documented in AGENTS.md. Shared workflows/helpers are pinned to
 `cf686f2cb631dd32722377f301692f84fe9cd6a5`.
 

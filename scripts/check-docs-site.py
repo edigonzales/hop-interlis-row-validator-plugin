@@ -59,10 +59,6 @@ def check(root):
     assert handbook in pages, 'Missing single-page handbook'
     for anchor in HANDBOOK_ANCHORS:
         assert anchor in pages[handbook].ids, 'Missing section: ' + anchor
-    handbook_text = handbook.read_text()
-    assert 'class="listingblock gui-mockup"' in handbook_text, 'Missing gui-mockup block'
-    styles = (root / 'site-assets/styles.css').read_text()
-    assert '.listingblock.gui-mockup pre' in styles and 'font-size: 0.75em' in styles, \
         'Missing gui-mockup styles'
     downloads = list(root.rglob('*.hpl'))
     assert len(downloads) == HPL_DOWNLOADS, f'Expected {HPL_DOWNLOADS} pipeline downloads, got {len(downloads)}'

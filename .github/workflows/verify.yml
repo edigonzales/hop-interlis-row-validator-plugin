@@ -5,9 +5,8 @@ permissions:
   contents: read
 jobs:
   build:
-    uses: edigonzales/hop-plugin-ci/.github/workflows/plugin-verify.yml@cf686f2cb631dd32722377f301692f84fe9cd6a5
+    uses: edigonzales/hop-plugin-ci/.github/workflows/verify.yml@f0a1eec368cb8c5d2592086b26393a6fc3916ad1
     with:
-      ci-ref: cf686f2cb631dd32722377f301692f84fe9cd6a5
       java-versions: '["21", "25"]'
       runner-os: '["ubuntu-latest", "macos-15", "windows-latest"]'
       canonical-runner-os: ubuntu-latest
@@ -16,10 +15,11 @@ jobs:
       maven-goals: clean verify
       compatibility-goals: clean test
       pom-file: pom.xml
-      zip-descriptors: >-
-        [{"artifactId":"hop-interlis-row-validator-plugin","zipGlob":"assemblies/plugin/target/hop-interlis-row-validator-plugin-*.zip","pluginRoot":"plugins/transforms/interlis-row-validator"}]
-      validation-commands: '["python3 .ci/hop-plugin-ci/scripts/check-plugin-repository.py --profile standard-plugin", "python3 scripts/check-distribution.py", "python3 -m unittest discover -s scripts -p test_run_e2e.py", "python3 scripts/run-e2e.py"]'
       artifact-name-prefix: hop-interlis-row-validator-plugin
-      group-id: ch.so.agi
-      hop-version: 2.19.0
+      artifacts: >-
+        [{"file":"assemblies/plugin/target/hop-interlis-row-validator-plugin-*.zip"}]
+      validation-command: |
+        python3 scripts/check-distribution.py
+        python3 -m unittest discover -s scripts -p test_run_e2e.py
+        python3 scripts/run-e2e.py
     secrets: inherit

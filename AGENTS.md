@@ -5,8 +5,7 @@ Keep the file validator and other plugins independent. Never normalize input tex
 
 ## CI and tests
 
-Read the [shared CI contract](https://github.com/edigonzales/hop-plugin-ci/blob/main/docs/ci-contract.md)
-and [plugin repository contract](https://github.com/edigonzales/hop-plugin-ci/blob/main/docs/plugin-repository-contract.md).
+Read the [shared CI contract](https://github.com/edigonzales/hop-plugin-ci/blob/main/docs/ci-contract.md).
 Workflow/helper revision: cf686f2cb631dd32722377f301692f84fe9cd6a5, profile standard-plugin.
 Prerequisites: JDK 21 (compatibility 25), Maven, Python 3; Linux SWT requires xvfb-run.
 From the repository root, with that helper checkout in .ci/hop-plugin-ci:
@@ -18,7 +17,6 @@ user settings below still provide the INTERLIS repositories and optional credent
 ```
 python3 .ci/hop-plugin-ci/scripts/write_maven_settings.py --output .ci/settings.xml
 mvn -s .ci/settings.xml -U -B -ntp clean verify
-python3 .ci/hop-plugin-ci/scripts/check-plugin-repository.py --profile standard-plugin
 python3 scripts/check-distribution.py
 python3 -m unittest discover -s scripts -p test_run_e2e.py
 python3 scripts/run-e2e.py
