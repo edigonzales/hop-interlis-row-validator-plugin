@@ -56,10 +56,10 @@ The distribution shades its library dependencies and relocates ANTLR; Hop/SWT ar
 
 ## CI and publication
 
-Shared CI is pinned to `cf686f2cb631dd32722377f301692f84fe9cd6a5` for both workflows and helpers.
+The [verification workflow](.github/workflows/verify.yml) pins the shared CI revision.
 Java 21/25 on Linux/macOS/Windows; Ubuntu/21 builds the sole canonical ZIP. Package checks and
-installed-Hop E2E test that ZIP. Main snapshot publication reuses those exact bytes, with a fresh
-Maven-resolution comparison afterwards. PRs never publish. Biblios deploys only from main.
+installed-Hop E2E test that ZIP. Main snapshot publication reuses those exact bytes.
+PRs never publish. Biblios deploys only from main.
 
 ## License
 

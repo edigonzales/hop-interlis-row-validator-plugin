@@ -25,6 +25,14 @@
     <module>transform</module>
     <module>assemblies/plugin</module>
   </modules>
+  <repositories>
+    <repository>
+      <id>sogeo-snapshots</id>
+      <url>https://jars.interlis.guru/snapshots/</url>
+      <releases><enabled>false</enabled></releases>
+      <snapshots><enabled>true</enabled></snapshots>
+    </repository>
+  </repositories>
   <properties>
     <swt.version>3.134.0</swt.version>
     <swt.artifactId>org.eclipse.swt.gtk.linux.x86_64</swt.artifactId>

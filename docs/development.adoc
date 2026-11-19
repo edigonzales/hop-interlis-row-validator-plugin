@@ -14,14 +14,15 @@ python3 scripts/build-docs.py
 ----
 
 Use `xvfb-run -a mvn ...` for Linux SWT tests. CI settings and verification commands
-are documented in AGENTS.md. Shared workflows/helpers are pinned to
-`cf686f2cb631dd32722377f301692f84fe9cd6a5`.
+are documented in AGENTS.md. The shared workflow revision is pinned in
+`.github/workflows/verify.yml`.
 
 Run Maven from the repository root. `.mvn/maven.config` loads project global settings
 with a mirror for Central at `https://repo.maven.apache.org/maven2/`, avoiding the
 `repo1.maven.org` endpoint that returned HTTP 429 in CI. This applies to dependencies
 and build plugins; the generated user settings still supply the INTERLIS repositories
-and credentials. Shared workflow and helper revisions remain pinned as above.
+and credentials. The reactor POM declares the repository needed to resolve its
+parent when the publish job starts with a fresh Maven cache.
 
 SWT tests explicitly register the transform before opening its dialog. A clean `test`
 build must work without an installed plugin or a previously generated Jandex index;
