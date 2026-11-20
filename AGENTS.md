@@ -18,12 +18,10 @@ user settings below still provide the INTERLIS repositories and optional credent
 python3 .ci/hop-plugin-ci/scripts/write_maven_settings.py --output .ci/settings.xml
 mvn -s .ci/settings.xml -U -B -ntp clean verify
 python3 scripts/check-distribution.py
-python3 -m unittest discover -s scripts -p test_run_e2e.py
-python3 scripts/run-e2e.py
+python3 scripts/run-e2e.py --hop-home "$HOP_HOME"
 python3 scripts/build-docs.py
 ```
 
 Compatibility: same Maven command with clean test. E2E installs the exact ZIP from
-assemblies/plugin/target in a disposable Hop 2.19.0 installation; HOP_E2E_HOME may
-point at a disposable preinstalled Hop. Never rebuild a CI candidate for E2E.
+assemblies/plugin/target in the disposable Hop 2.19.0 installation passed as HOP_HOME. Never rebuild a CI candidate for E2E.
 No tests are to be skipped. Report checks that cannot run. Publication uses the canonical ZIP and runs only on main.

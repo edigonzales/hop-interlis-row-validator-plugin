@@ -9,7 +9,7 @@ Unit tests use synthetic local models, including INTERLIS 2.4 temporal types.
 ----
 mvn -B -ntp clean verify
 python3 scripts/check-distribution.py
-python3 scripts/run-e2e.py
+python3 scripts/run-e2e.py --hop-home "$HOP_HOME"
 python3 scripts/build-docs.py
 ----
 
@@ -28,10 +28,10 @@ SWT tests explicitly register the transform before opening its dialog. A clean `
 build must work without an installed plugin or a previously generated Jandex index;
 installed-ZIP discovery is verified separately by the package and E2E checks.
 
-The E2E runner checks the Apache Hop distribution checksum, installs the built ZIP in a
-fresh distribution and runs actual hop-run pipelines. It never rebuilds the candidate.
-Use `--cache` for a downloaded distribution cache; results and logs remain in target/e2e.
-Use only a disposable installation for HOP_E2E_HOME.
+CI verifies the Apache Hop distribution checksum before extracting it. Locally,
+pass a disposable Hop 2.19.0 installation. The runner installs the built ZIP and
+checks that Full validation preserves original rows and releases none after a late
+uniqueness failure. Logs remain under `target/installed-e2e-*`.
 
 Biblios builds a temporary Git snapshot of the working documentation or the specified
 `--revision`, without modifying the checkout. The build appends site.css to the theme,
@@ -40,17 +40,3 @@ then verifies links, GUI classes, downloads and search entries.
 The CI matrix cannot be substituted by a local macOS check. Main-only publication uses
 exact canonical bytes after verification/E2E; credentials and GitHub Pages configuration
 must be provided by the repository owner. No credentials belong in this repository.
-
-== Local acceptance observation
-
-On 2026-10-07, macOS arm64 with Temurin 21.0.7 and Hop 2.19.0 completed all nine
-installed-ZIP scenarios, including the typed temporal case with a UTC-to-Zurich day boundary.
-The 20,000-row synthetic full-validation run took 2.794 seconds including JVM startup and
-pipeline preparation; OS peak resident memory for the complete Hop process was 498,401,280 bytes
-(about 475 MiB). The cache held at most 1,000 original rows; compressed spill files were removed.
-These measurements include Hop and its other plugins and are not a heap allocation estimate
-for this transform. They do not imply constant total memory or predict production workloads.
-
-The native SWT dialog and core/runtime tests were also executed locally on Java 21 and 25.
-Linux and Windows acceptance remains the responsibility of the configured CI matrix;
-no remote publication or Pages deployment is implied by a local build.

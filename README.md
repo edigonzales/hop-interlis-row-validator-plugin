@@ -29,7 +29,7 @@ Build the exact working documentation with `python3 scripts/build-docs.py`; outp
 ## Build and development
 
 JDK 21, Maven and Python 3 are required. Run `mvn -B -ntp clean verify`, then
-`python3 scripts/check-distribution.py` and `python3 scripts/run-e2e.py`.
+`python3 scripts/check-distribution.py` and `python3 scripts/run-e2e.py --hop-home "$HOP_HOME"`.
 See [AGENTS.md](AGENTS.md) for the canonical repository settings and compatibility commands.
 Linux SWT tests run under `xvfb-run -a`. Tests use local synthetic models.
 
