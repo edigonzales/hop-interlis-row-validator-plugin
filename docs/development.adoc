@@ -28,10 +28,14 @@ SWT tests explicitly register the transform before opening its dialog. A clean `
 build must work without an installed plugin or a previously generated Jandex index;
 installed-ZIP discovery is verified separately by the package and E2E checks.
 
-CI verifies the Apache Hop distribution checksum before extracting it. Locally,
-pass a disposable Hop 2.19.0 installation. The runner installs the built ZIP and
+CI verifies the Apache Hop distribution checksum before extracting it. For the
+local E2E runner, pass a disposable Hop 2.19.0 installation on Linux or macOS. The runner installs the built ZIP and
 checks that Full validation preserves original rows and releases none after a late
-uniqueness failure. Logs remain under `target/installed-e2e-*`.
+uniqueness failure. Both cases exercise compressed spooling and cleanup. Logs
+remain under `target/installed-e2e-*`. The
+link:https://github.com/edigonzales/hop-distributions#end-to-end-verification[distribution suite]
+also tests the second-pass class constraint, Single Pass, empty input, parallel
+configurations and temporal conversion.
 
 Biblios builds a temporary Git snapshot of the working documentation or the specified
 `--revision`, without modifying the checkout. The build appends site.css to the theme,

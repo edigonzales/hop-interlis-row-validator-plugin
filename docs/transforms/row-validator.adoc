@@ -166,7 +166,9 @@ Full validation rejects multiple copies and partitioning; Single Pass allows ind
 Open link:https://github.com/edigonzales/hop-interlis-row-validator-plugin/tree/main/examples[examples]
 and follow its README. `scalar-rows.hpl` maps key and amount from a Data Grid, forces spooling
 with a one-row cache and logs output. Point MODEL_DIR at the examples directory.
-The installed-plugin E2E scenarios also exercise late duplicates and native Single Pass.
+The installed-plugin checks exercise a late duplicate. The
+link:https://github.com/edigonzales/hop-distributions#end-to-end-verification[distribution suite]
+also exercises native Single Pass and parallel copies.
 
 == Error handling
 
