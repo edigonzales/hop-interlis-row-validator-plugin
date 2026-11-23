@@ -18,7 +18,6 @@ public final class ValidationSession implements AutoCloseable {
   private final BooleanSupplier cancelled;
   private final Consumer<Issue> sink;
   private final Map<String, Issue.RowReference> rows = new HashMap<>();
-  private final Map<String, Map<String, String>> effectiveConfig;
   private Issue.RowReference current;
   private String currentId;
   private String phase = "initialization";
@@ -48,13 +47,6 @@ public final class ValidationSession implements AutoCloseable {
     this.singlePass = singlePass;
     this.cancelled = cancelled;
     this.sink = sink;
-    effectiveConfig = new TreeMap<>();
-    for (String name : config.getIliQnames()) {
-      Map<String, String> params = new TreeMap<>();
-      for (String key : config.getConfigParams(name))
-        params.put(key, config.getConfigValue(name, key));
-      effectiveConfig.put(name, params);
-    }
     var factory = new SessionLogger();
     factory.setLogger(factory);
     Settings settings = new Settings();
@@ -73,10 +65,6 @@ public final class ValidationSession implements AutoCloseable {
       validator.close();
       throw ex;
     }
-  }
-
-  public Map<String, Map<String, String>> effectiveConfiguration() {
-    return Collections.unmodifiableMap(effectiveConfig);
   }
 
   public long errors() {
